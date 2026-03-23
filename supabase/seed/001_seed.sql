@@ -3,7 +3,7 @@ truncate members, courts, sessions, session_attendances, session_guests, monthly
 
 -- Seed: members
 insert into members (name, avatar_url, gender, role, access_code) values
-  ('Mạnh',     'https://i.pravatar.cc/300?u=manh',     'male',   'leader',  '1234'),
+  ('Mạnh',     'https://i.pravatar.cc/300?u=manh',     'male',   'leader',  'hihihaha277'),
   ('Tuấn',     'https://i.pravatar.cc/300?u=tuan',     'male',   'member',  null),
   ('Thế Anh',  'https://i.pravatar.cc/300?u=theanh',   'male',   'member',  null),
   ('Sơn',      'https://i.pravatar.cc/300?u=son',       'male',   'member',  null),
