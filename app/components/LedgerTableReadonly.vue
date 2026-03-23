@@ -8,7 +8,7 @@
       <table class="w-full text-sm border-collapse">
         <thead>
           <tr>
-            <th class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-100 border border-gray-200 w-[80px]">Ngày</th>
+            <th class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-100 border border-gray-200 w-[80px] sticky left-0 z-10">Ngày</th>
             <th class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-100 border border-gray-200">Cầu</th>
             <th class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-100 border border-gray-200">Sân</th>
             <th class="px-2 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider bg-gray-200 border border-gray-200 w-[90px]">Tổng</th>
@@ -33,7 +33,7 @@
             class="hover:bg-gray-50/50 transition-colors"
           >
             <!-- Ngày -->
-            <td class="px-3 py-2.5 text-center text-gray-900 font-medium border border-gray-200 w-[80px]">
+            <td class="px-3 py-2.5 text-center text-gray-900 font-medium border border-gray-200 w-[80px] sticky left-0 z-10 bg-white">
               {{ formatDate(session.session_date) }}
             </td>
             <!-- Cầu -->
@@ -97,7 +97,7 @@
         <!-- Tổng cộng -->
         <tfoot v-if="sessions.length">
           <tr class="font-bold">
-            <td class="px-3 py-3 text-center text-gray-900 border border-gray-200 bg-gray-100">Tổng tháng</td>
+            <td class="px-3 py-3 text-center text-gray-900 border border-gray-200 bg-gray-100 sticky left-0 z-10">Tổng tháng</td>
             <td class="px-3 py-3 text-right text-gray-900 border border-gray-200 bg-gray-100">{{ formatNumber(totalRow.shuttlecockFee) }}</td>
             <td class="px-3 py-3 text-right text-gray-900 border border-gray-200 bg-gray-100">{{ formatNumber(totalRow.courtFee) }}</td>
             <td class="px-2 py-3 text-right text-gray-900 border border-gray-200 bg-gray-200">{{ formatNumber(totalRow.total) }}</td>

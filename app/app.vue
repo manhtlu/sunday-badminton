@@ -3,4 +3,5 @@
     <NuxtPage />
   </NuxtLayout>
   <UNotifications />
+  <GlobalLoading />
 </template>

@@ -8,8 +8,8 @@
       <table class="w-full text-sm border-collapse">
         <thead>
           <tr>
-            <th class="px-1 py-3 bg-gray-100 border border-gray-200 w-8"></th>
-            <th class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-100 border border-gray-200 w-[80px]">Ngày</th>
+            <th class="px-1 py-3 bg-gray-100 border border-gray-200 w-8 sticky left-0 z-10"></th>
+            <th class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-100 border border-gray-200 w-[80px] sticky left-8 z-10">Ngày</th>
             <th class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-100 border border-gray-200">Cầu</th>
             <th class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-100 border border-gray-200">Sân</th>
             <th class="px-2 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider bg-gray-200 border border-gray-200 w-[90px]">Tổng</th>
@@ -33,7 +33,7 @@
             class="hover:bg-gray-50/50 transition-colors"
           >
             <!-- Delete -->
-            <td class="px-1 py-1 border border-gray-200 w-8 text-center">
+            <td class="px-1 py-1 border border-gray-200 w-8 text-center sticky left-0 z-10 bg-white">
               <UButton
                 icon="i-heroicons-trash"
                 variant="ghost"
@@ -43,7 +43,7 @@
               />
             </td>
             <!-- Ngày: datepicker -->
-            <td class="px-1 py-1 border border-gray-200 w-[80px]">
+            <td class="px-1 py-1 border border-gray-200 w-[80px] sticky left-8 z-10 bg-white">
               <input
                 v-model="session.session_date"
                 type="date"
@@ -165,8 +165,8 @@
         <tfoot v-if="editableSessions.length">
           <!-- Row tổng -->
           <tr class="font-bold">
-            <td class="border border-gray-200 bg-gray-100"></td>
-            <td class="px-3 py-3 text-center text-gray-900 border border-gray-200 bg-gray-100">Tổng tháng</td>
+            <td class="border border-gray-200 bg-gray-100 sticky left-0 z-10"></td>
+            <td class="px-3 py-3 text-center text-gray-900 border border-gray-200 bg-gray-100 sticky left-8 z-10">Tổng tháng</td>
             <td class="px-3 py-3 text-right text-gray-900 border border-gray-200 bg-gray-100">{{ formatNumber(totalRow.shuttlecockFee) }}</td>
             <td class="px-3 py-3 text-right text-gray-900 border border-gray-200 bg-gray-100">{{ formatNumber(totalRow.courtFee) }}</td>
             <td class="px-2 py-3 text-right text-gray-900 border border-gray-200 bg-gray-200">{{ formatNumber(totalRow.total) }}</td>
@@ -187,7 +187,7 @@
           </tr>
           <!-- Row trạng thái thanh toán -->
           <tr>
-            <td class="px-3 py-2 text-center text-xs font-semibold text-gray-500 border border-gray-200 bg-gray-50" colspan="6">Thanh toán</td>
+            <td class="px-3 py-2 text-center text-xs font-semibold text-gray-500 border border-gray-200 bg-gray-50 sticky left-0 z-10" colspan="6">Thanh toán</td>
             <td
               v-for="member in members"
               :key="member.id"
