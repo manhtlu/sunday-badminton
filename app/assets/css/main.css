@@ -1,0 +1,37 @@
+/* Force light color scheme globally */
+:root,
+html,
+body {
+  color-scheme: light !important;
+}
+
+/* Scrollbar light */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4c4c4;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+
+/* Force light inputs */
+input,
+select,
+textarea {
+  color-scheme: light !important;
+}
+
+/* Checkbox override */
+input[type="checkbox"] {
+  color-scheme: light !important;
+}

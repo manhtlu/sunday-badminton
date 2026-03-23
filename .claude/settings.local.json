@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm \"d:/Personal/manhnt-claude-code/.claude/agents/coding-standards/php-laravel.md\")",
+      "Bash(mkdir -p \"d:/Personal/manhnt-claude-code/.claude/agents/coding-standards/laravel\" \"d:/Personal/manhnt-claude-code/.claude/agents/coding-standards/vue\" \"d:/Personal/manhnt-claude-code/.claude/agents/coding-standards/nextjs\" \"d:/Personal/manhnt-claude-code/.claude/agents/coding-standards/node\" \"d:/Personal/manhnt-claude-code/.claude/agents/coding-standards/python\" \"d:/Personal/manhnt-claude-code/.claude/agents/coding-standards/electron\")"
+    ]
+  }
+}

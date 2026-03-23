@@ -1,0 +1,20 @@
+{
+  "name": "sunday-badminton-team",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^2.22.3",
+    "@nuxtjs/supabase": "^2.0.4",
+    "nuxt": "^4.4.2",
+    "v-calendar": "^3.1.2",
+    "vue": "^3.5.30",
+    "vue-router": "^5.0.3"
+  }
+}
