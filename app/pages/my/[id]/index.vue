@@ -43,6 +43,38 @@
         </div>
       </div>
 
+      <!-- QR buttons -->
+      <div class="flex gap-2 mb-4">
+        <button
+          class="flex-1 bg-red-700 rounded-xl p-3 shadow-md flex items-center justify-center gap-2 hover:bg-red-800 transition-colors"
+          @click="showQr = true"
+        >
+          <UIcon name="i-heroicons-qr-code" class="text-lg text-white" />
+          <span class="text-sm font-semibold text-white">Xem QR</span>
+        </button>
+        <a
+          href="/qr.jpg"
+          download="qr-chuyen-tien.jpg"
+          class="flex-1 bg-amber-600 rounded-xl p-3 shadow-md flex items-center justify-center gap-2 hover:bg-amber-700 transition-colors"
+        >
+          <UIcon name="i-heroicons-arrow-down-tray" class="text-lg text-white" />
+          <span class="text-sm font-semibold text-white">Tải QR</span>
+        </a>
+      </div>
+
+      <!-- QR Dialog -->
+      <UModal v-model="showQr" :ui="{ width: 'sm:max-w-xs' }">
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-bold text-gray-900">QR chuyển tiền</h3>
+            <button class="text-gray-400 hover:text-gray-600" @click="showQr = false">
+              <UIcon name="i-heroicons-x-mark" class="text-lg" />
+            </button>
+          </div>
+          <img src="/qr.jpg" alt="QR chuyển tiền" class="w-full rounded-lg" />
+        </div>
+      </UModal>
+
       <!-- Sessions count card -->
       <div class="bg-white rounded-xl p-4 shadow-sm ring-1 ring-gray-100 flex items-center gap-3">
         <div class="bg-blue-50 rounded-full p-2">
@@ -155,6 +187,7 @@ const client = useSupabaseClient()
 const toast = useToast()
 const memberId = Number(route.params.id)
 const fileInput = ref<HTMLInputElement | null>(null)
+const showQr = ref(false)
 
 async function handleAvatarChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]

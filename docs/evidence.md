@@ -27,6 +27,7 @@
 | `SessionDialog.vue` | Modal tạo/sửa buổi tập, điểm danh, chia phí |
 | `LedgerTable.vue` | Bảng sổ cái tháng (editable, leader) |
 | `LedgerTableReadonly.vue` | Bảng sổ cái tháng (read-only, member) |
+| `GlobalLoading.vue` | Overlay loading cho mọi API call |
 
 ## Database Tables
 
@@ -45,3 +46,8 @@ All 7 tables migrated (12 migration files):
 - MyPage: avatar upload with toast notifications
 - Schedule: v-calendar integration, Vietnamese weekday headers
 - Global: `<UNotifications />` added to app.vue
+- PWA: `@vite-pwa/nuxt` setup, manifest, service worker, icon 512x512
+- Global loading: auto intercept Supabase fetch → overlay spinner
+- LedgerTable + LedgerTableReadonly: sticky cột Ngày khi scroll ngang
+- Browser title: "Sunday Badminton — Quản lý đội cầu lông"
+- Navigation: bỏ menu Lịch tập cho member, fix link Tổng quan → member dashboard
