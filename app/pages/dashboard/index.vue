@@ -165,7 +165,8 @@ const { data: sessions, refresh: refreshSessions, pending: loadingSessions } = a
   'sessions',
   async () => {
     const startDate = `${yearMonth.value}-01`
-    const endDate = `${yearMonth.value}-31`
+    const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
+    const endDate = `${yearMonth.value}-${String(daysInMonth).padStart(2, '0')}`
     const { data } = await client
       .from('sessions')
       .select('*')
