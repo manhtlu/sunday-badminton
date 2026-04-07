@@ -119,7 +119,10 @@
             </div>
             <!-- Fee -->
             <div v-if="s.absent" class="text-xs text-gray-400 italic">Nghỉ</div>
-            <div v-else class="text-sm font-bold text-gray-900">{{ formatCurrency(s.fee) }}</div>
+            <div v-else class="text-right">
+              <div class="text-sm font-bold text-gray-900">{{ formatCurrency(s.personalFee) }}</div>
+              <div v-if="s.guestFee > 0" class="text-[11px] text-orange-500 font-medium">+ {{ formatCurrency(s.guestFee) }} guest</div>
+            </div>
           </div>
         </div>
         <div v-else class="bg-[#eff1f2] rounded-xl px-4 py-8 text-center text-gray-400 text-sm">
@@ -297,6 +300,8 @@ const { data: sessionDetails } = await useAsyncData(
         courtName: courtMap[s.court_id] || '',
         absent: !att || !att.is_present,
         fee: att ? (att.fee_amount || 0) + (att.guest_fee || 0) : 0,
+        personalFee: att ? (att.fee_amount || 0) : 0,
+        guestFee: att ? (att.guest_fee || 0) : 0,
       }
     })
   },
