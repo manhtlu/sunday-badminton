@@ -121,7 +121,7 @@
             <div v-if="s.absent" class="text-xs text-gray-400 italic">Nghỉ</div>
             <div v-else class="text-right">
               <div class="text-sm font-bold text-gray-900">{{ formatCurrency(s.personalFee) }}</div>
-              <div v-if="s.guestFee > 0" class="text-[11px] text-orange-500 font-medium">+ {{ formatCurrency(s.guestFee) }} guest</div>
+              <div v-for="g in s.guests" :key="g.name" class="text-[11px] text-orange-500 font-medium">+ {{ formatCurrency(g.fee) }} ({{ g.name }})</div>
             </div>
           </div>
         </div>
@@ -274,7 +274,7 @@ const { data: sessionDetails } = await useAsyncData(
     const sessionIds = sessions.map((s: any) => s.id)
     const courtIds = [...new Set(sessions.map((s: any) => s.court_id))]
 
-    const [{ data: attendances }, { data: courts }] = await Promise.all([
+    const [{ data: attendances }, { data: courts }, { data: guests }] = await Promise.all([
       client
         .from('session_attendances')
         .select('session_id, fee_amount, guest_fee, is_present')
@@ -284,6 +284,11 @@ const { data: sessionDetails } = await useAsyncData(
         .from('courts')
         .select('id, name')
         .in('id', courtIds),
+      client
+        .from('session_guests')
+        .select('session_id, guest_name, fee_amount')
+        .eq('member_id', memberId)
+        .in('session_id', sessionIds),
     ])
 
     const courtMap: Record<number, string> = {}
@@ -291,17 +296,26 @@ const { data: sessionDetails } = await useAsyncData(
       courtMap[c.id] = c.name
     }
 
-    return sessions.map((s: any) => {
-      const att = (attendances || []).find((a: any) => a.session_id === s.id)
-      const date = new Date(s.session_date)
+    const guestMap: Record<number, { name: string; fee: number }[]> = {}
+    for (const g of (guests || []) as any[]) {
+      const sid = g.session_id as number
+      if (!guestMap[sid]) guestMap[sid] = []
+      guestMap[sid]!.push({ name: g.guest_name as string, fee: (g.fee_amount as number) || 0 })
+    }
+
+    return (sessions as any[]).map((s: any) => {
+      const att = (attendances as any[] || []).find((a: any) => a.session_id === s.id)
+      const date = new Date(s.session_date as string)
+      const personalFee: number = att ? (att.fee_amount || 0) : 0
+      const sessionGuests = guestMap[s.id] || []
       return {
         sessionId: s.id,
         date: `${date.getDate()}/${date.getMonth() + 1}`,
         courtName: courtMap[s.court_id] || '',
         absent: !att || !att.is_present,
-        fee: att ? (att.fee_amount || 0) + (att.guest_fee || 0) : 0,
-        personalFee: att ? (att.fee_amount || 0) : 0,
-        guestFee: att ? (att.guest_fee || 0) : 0,
+        fee: personalFee + sessionGuests.reduce((sum: number, g: any) => sum + g.fee, 0),
+        personalFee,
+        guests: sessionGuests,
       }
     })
   },
