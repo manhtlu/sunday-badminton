@@ -338,7 +338,7 @@ const { data: allStats } = await useAsyncData(
 const monthStats = computed(() => {
   const details = sessionDetails.value || []
   const present = details.filter((s) => !s.absent)
-  const totalFee = present.reduce((sum, s) => sum + s.fee, 0)
+  const totalFee = present.reduce((sum, s) => sum + s.personalFee, 0)
   const stat = (allStats.value || []).find((s: any) => s.year_month === yearMonth.value)
 
   return {
