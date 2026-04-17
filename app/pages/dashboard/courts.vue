@@ -140,8 +140,6 @@ interface CourtRow {
   _original?: { name: string; address: string; directions: string; court_fee: number; is_active: boolean }
 }
 
-const client = useSupabaseClient()
-
 const courts = ref<CourtRow[]>([])
 const showDeleteModal = ref(false)
 const courtToDelete = ref<CourtRow | null>(null)
@@ -149,10 +147,7 @@ const deleting = ref(false)
 let tempIdCounter = 0
 
 async function fetchCourts() {
-  const { data } = await (client.from('courts') as any)
-    .select('id, name, address, directions, court_fee, is_active')
-    .order('is_active', { ascending: false })
-    .order('name')
+  const data = await $fetch<any[]>('/api/courts')
   courts.value = (data || []).map((c: any) => ({ ...c, directions: c.directions || '', court_fee: c.court_fee || 0, _editing: false, _isNew: false }))
 }
 
@@ -201,19 +196,20 @@ async function saveCourt(court: CourtRow) {
   }
 
   if (court._isNew) {
-    const { data } = await (client.from('courts') as any)
-      .insert(payload)
-      .select('id')
-      .single()
-    if (data) {
+    const data = await $fetch<{ id: number }>('/api/courts', {
+      method: 'POST',
+      body: payload,
+    })
+    if (data?.id) {
       court.id = data.id
       court._isNew = false
       court._editing = false
     }
   } else {
-    await (client.from('courts') as any)
-      .update(payload)
-      .eq('id', court.id)
+    await $fetch(`/api/courts/${court.id}`, {
+      method: 'PATCH',
+      body: payload,
+    })
     court._editing = false
   }
 }
@@ -227,7 +223,7 @@ async function deleteCourt() {
   if (!courtToDelete.value) return
   deleting.value = true
   try {
-    await (client.from('courts') as any).delete().eq('id', courtToDelete.value.id)
+    await $fetch(`/api/courts/${courtToDelete.value.id}`, { method: 'DELETE' })
     const idx = courts.value.indexOf(courtToDelete.value)
     if (idx >= 0) courts.value.splice(idx, 1)
     showDeleteModal.value = false

@@ -183,10 +183,11 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateDdMm } from '~/utils/dateInput'
+
 const MAX_AVATAR_SIZE = 200 * 1024 // 200KB
 
 const route = useRoute()
-const client = useSupabaseClient()
 const toast = useToast()
 const memberId = Number(route.params.id)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -208,9 +209,10 @@ async function handleAvatarChange(event: Event) {
     reader.readAsDataURL(file)
   })
 
-  await (client.from('members') as any)
-    .update({ avatar_url: base64 })
-    .eq('id', memberId)
+  await $fetch(`/api/members/${memberId}`, {
+    method: 'PATCH',
+    body: { avatar_url: base64 },
+  })
 
   if (member.value) {
     member.value.avatar_url = base64
@@ -246,12 +248,7 @@ function nextMonth() {
 
 // Fetch member
 const { data: member } = await useAsyncData('member', async () => {
-  const { data } = await client
-    .from('members')
-    .select('id, name, avatar_url, gender')
-    .eq('id', memberId)
-    .single()
-  return data as any
+  return await $fetch(`/api/members/${memberId}`)
 })
 
 // Fetch sessions + attendances for selected month
@@ -262,33 +259,25 @@ const { data: sessionDetails } = await useAsyncData(
     const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
     const endDate = `${yearMonth.value}-${String(daysInMonth).padStart(2, '0')}`
 
-    const { data: sessions } = await client
-      .from('sessions')
-      .select('id, session_date, court_id')
-      .gte('session_date', startDate)
-      .lte('session_date', endDate)
-      .order('session_date')
+    const sessions = await $fetch<any[]>(
+      `/api/sessions?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&fields=full`,
+    )
 
     if (!sessions?.length) return []
 
     const sessionIds = sessions.map((s: any) => s.id)
     const courtIds = [...new Set(sessions.map((s: any) => s.court_id))]
 
-    const [{ data: attendances }, { data: courts }, { data: guests }] = await Promise.all([
-      client
-        .from('session_attendances')
-        .select('session_id, fee_amount, guest_fee, is_present')
-        .eq('member_id', memberId)
-        .in('session_id', sessionIds),
-      client
-        .from('courts')
-        .select('id, name')
-        .in('id', courtIds),
-      client
-        .from('session_guests')
-        .select('session_id, guest_name, fee_amount')
-        .eq('member_id', memberId)
-        .in('session_id', sessionIds),
+    const sessionIdsParam = sessionIds.join(',')
+
+    const [attendances, courts, guests] = await Promise.all([
+      $fetch(
+        `/api/session-attendances?sessionIds=${encodeURIComponent(sessionIdsParam)}&memberId=${memberId}`,
+      ),
+      $fetch(`/api/courts?list=1`),
+      $fetch(
+        `/api/session-guests?sessionIds=${encodeURIComponent(sessionIdsParam)}&memberId=${memberId}`,
+      ),
     ])
 
     const courtMap: Record<number, string> = {}
@@ -305,12 +294,11 @@ const { data: sessionDetails } = await useAsyncData(
 
     return (sessions as any[]).map((s: any) => {
       const att = (attendances as any[] || []).find((a: any) => a.session_id === s.id)
-      const date = new Date(s.session_date as string)
       const personalFee: number = att ? (att.fee_amount || 0) : 0
       const sessionGuests = guestMap[s.id] || []
       return {
         sessionId: s.id,
-        date: `${date.getDate()}/${date.getMonth() + 1}`,
+        date: formatDateDdMm(s.session_date),
         courtName: courtMap[s.court_id] || '',
         absent: !att || !att.is_present,
         fee: personalFee + sessionGuests.reduce((sum: number, g: any) => sum + g.fee, 0),
@@ -326,11 +314,7 @@ const { data: sessionDetails } = await useAsyncData(
 const { data: allStats } = await useAsyncData(
   'myAllStats',
   async () => {
-    const { data } = await client
-      .from('member_monthly_stats')
-      .select('year_month, is_paid')
-      .eq('member_id', memberId)
-    return (data || []) as any[]
+    return await $fetch(`/api/member-monthly-stats?memberId=${memberId}`) as any[]
   },
 )
 

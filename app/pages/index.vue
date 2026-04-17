@@ -57,14 +57,7 @@
 </template>
 
 <script setup lang="ts">
-const client = useSupabaseClient()
-
 const { data: members } = await useAsyncData('members', async () => {
-  const { data } = await client
-    .from('members')
-    .select('id, name, avatar_url, gender')
-    .eq('is_active', true)
-    .order('name')
-  return data
+  return await $fetch('/api/members?active=true')
 })
 </script>

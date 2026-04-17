@@ -99,13 +99,12 @@
 
 <script setup lang="ts">
 import type { EditableSession } from '~/components/LedgerTable.vue'
+import { toDateInputValue } from '~/utils/dateInput'
 
 definePageMeta({
   layout: 'leader',
   middleware: 'leader',
 })
-
-const client = useSupabaseClient()
 
 // Month picker
 const now = new Date()
@@ -136,24 +135,23 @@ const saving = ref(false)
 
 // Fetch members
 const { data: members } = await useAsyncData('members', async () => {
-  const { data } = await client
-    .from('members')
-    .select('id, name, gender, avatar_url')
-    .eq('is_active', true)
-    .order('name')
-  return (data || []) as { id: number; name: string; gender: string; avatar_url: string }[]
+  return await $fetch('/api/members?active=true') as {
+    id: number
+    name: string
+    gender: string
+    avatar_url: string
+  }[]
 })
 
 const membersWithAvatar = computed(() => members.value || [])
 
 // Fetch courts
 const { data: courts } = await useAsyncData('courts', async () => {
-  const { data } = await client
-    .from('courts')
-    .select('id, name, court_fee')
-    .eq('is_active', true)
-    .order('name')
-  return (data || []) as { id: number; name: string; court_fee?: number }[]
+  return await $fetch('/api/courts?active=true') as {
+    id: number
+    name: string
+    court_fee?: number
+  }[]
 })
 
 async function onSessionSaved() {
@@ -167,13 +165,9 @@ const { data: sessions, refresh: refreshSessions, pending: loadingSessions } = a
     const startDate = `${yearMonth.value}-01`
     const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
     const endDate = `${yearMonth.value}-${String(daysInMonth).padStart(2, '0')}`
-    const { data } = await client
-      .from('sessions')
-      .select('*')
-      .gte('session_date', startDate)
-      .lte('session_date', endDate)
-      .order('session_date')
-    return (data || []) as any[]
+    return await $fetch(
+      `/api/sessions?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+    ) as any[]
   },
   { watch: [yearMonth] }
 )
@@ -184,11 +178,8 @@ const { data: attendances, refresh: refreshAttendances } = await useAsyncData(
   async () => {
     const sessionIds = (sessions.value || []).map((s) => s.id)
     if (!sessionIds.length) return []
-    const { data } = await client
-      .from('session_attendances')
-      .select('*')
-      .in('session_id', sessionIds)
-    return (data || []) as any[]
+    const q = sessionIds.join(',')
+    return await $fetch(`/api/session-attendances?sessionIds=${encodeURIComponent(q)}`) as any[]
   },
   { watch: [sessions] }
 )
@@ -199,11 +190,8 @@ const { data: guests } = await useAsyncData(
   async () => {
     const sessionIds = (sessions.value || []).map((s) => s.id)
     if (!sessionIds.length) return []
-    const { data } = await client
-      .from('session_guests')
-      .select('*')
-      .in('session_id', sessionIds)
-    return (data || []) as any[]
+    const q = sessionIds.join(',')
+    return await $fetch(`/api/session-guests?sessionIds=${encodeURIComponent(q)}`) as any[]
   },
   { watch: [sessions] }
 )
@@ -212,11 +200,9 @@ const { data: guests } = await useAsyncData(
 const { data: monthlyStats, refresh: refreshMonthlyStats } = await useAsyncData(
   'monthlyStats',
   async () => {
-    const { data } = await client
-      .from('member_monthly_stats')
-      .select('member_id, is_paid')
-      .eq('year_month', yearMonth.value)
-    return (data || []) as any[]
+    return await $fetch(
+      `/api/member-monthly-stats?yearMonth=${encodeURIComponent(yearMonth.value)}`,
+    ) as any[]
   },
   { watch: [yearMonth] }
 )
@@ -250,17 +236,22 @@ async function togglePaid(memberId: number) {
   const now = new Date().toISOString()
   const { totalFee, sessionsAttended } = calcMemberStats(memberId)
 
-  await (client.from('member_monthly_stats') as any).upsert({
-    member_id: memberId,
-    year_month: yearMonth.value,
-    is_paid: !current,
-    paid_at: !current ? now : null,
-    total_fee: totalFee,
-    extra_fee: 0,
-    grand_total: totalFee,
-    sessions_attended: sessionsAttended,
-    cumulative_total: 0,
-  }, { onConflict: 'member_id,year_month' })
+  await $fetch('/api/member-monthly-stats/upsert', {
+    method: 'POST',
+    body: {
+      member_id: memberId,
+      year_month: yearMonth.value,
+      is_paid: !current,
+      paid_at: !current
+        ? now
+        : null,
+      total_fee: totalFee,
+      extra_fee: 0,
+      grand_total: totalFee,
+      sessions_attended: sessionsAttended,
+      cumulative_total: 0,
+    },
+  })
 
   await refreshMonthlyStats()
 }
@@ -299,7 +290,7 @@ function buildEditableState() {
 
     return {
       id: s.id,
-      session_date: s.session_date,
+      session_date: toDateInputValue(s.session_date),
       shuttlecock_fee: (s.shuttlecock_quantity || 0) * (s.shuttlecock_price_per_unit || 0),
       court_fee: s.court_fee || 0,
       guest_fee: guestFee,
@@ -320,12 +311,15 @@ async function saveChanges() {
   saving.value = true
   try {
     for (const session of editableSessions.value) {
-      await (client.from('sessions') as any).update({
-        session_date: session.session_date,
-        court_fee: session.court_fee,
-        total_fee: session.shuttlecock_fee + session.court_fee,
-        guest_note: session.note,
-      }).eq('id', session.id)
+      await $fetch(`/api/sessions/${session.id}`, {
+        method: 'PATCH',
+        body: {
+          session_date: session.session_date,
+          court_fee: session.court_fee,
+          total_fee: session.shuttlecock_fee + session.court_fee,
+          guest_note: session.note,
+        },
+      })
 
       const memberList = members.value || []
       for (const m of memberList) {
@@ -333,13 +327,16 @@ async function saveChanges() {
         if (!mf) continue
         const feeAmount = Number(mf.fee) || 0
 
-        await (client.from('session_attendances') as any).upsert({
-          session_id: session.id,
-          member_id: m.id,
-          is_present: !mf.absent,
-          fee_amount: feeAmount,
-          guest_fee: 0,
-        }, { onConflict: 'session_id,member_id' })
+        await $fetch('/api/session-attendances/upsert', {
+          method: 'POST',
+          body: {
+            session_id: session.id,
+            member_id: m.id,
+            is_present: !mf.absent,
+            fee_amount: feeAmount,
+            guest_fee: 0,
+          },
+        })
       }
     }
 
@@ -352,9 +349,7 @@ async function saveChanges() {
 
 async function deleteSession(sessionId: number) {
   if (!confirm('Xóa buổi tập này và toàn bộ dữ liệu liên quan?')) return
-  await (client.from('session_guests') as any).delete().eq('session_id', sessionId)
-  await (client.from('session_attendances') as any).delete().eq('session_id', sessionId)
-  await (client.from('sessions') as any).delete().eq('id', sessionId)
+  await $fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' })
   await refreshSessions()
   await refreshAttendances()
 }

@@ -19,7 +19,7 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  modules: ['@nuxt/ui', '@nuxtjs/supabase', '@vite-pwa/nuxt'],
+  modules: ['@nuxt/ui', '@vite-pwa/nuxt'],
 
   pwa: {
     registerType: 'autoUpdate',
@@ -49,10 +49,6 @@ export default defineNuxtConfig({
     },
   },
 
-  supabase: {
-    redirect: false,
-  },
-
   colorMode: {
     preference: 'light',
     fallback: 'light',
@@ -60,6 +56,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    databaseUrl: process.env.DATABASE_URL,
     public: {
       appName: 'Sunday Badminton Team',
     },

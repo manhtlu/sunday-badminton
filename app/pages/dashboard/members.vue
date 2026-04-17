@@ -135,8 +135,6 @@ interface MemberRow {
   _originalGender?: string
 }
 
-const client = useSupabaseClient()
-
 const genderOptions = [
   { label: 'Nam', value: 'male' },
   { label: 'Nữ', value: 'female' },
@@ -151,10 +149,7 @@ const avatarTarget = ref<MemberRow | null>(null)
 let tempIdCounter = 0
 
 async function fetchMembers() {
-  const { data } = await (client.from('members') as any)
-    .select('id, name, avatar_url, gender, role, is_active')
-    .order('is_active', { ascending: false })
-    .order('name')
+  const data = await $fetch<any[]>('/api/members')
   members.value = (data || []).map((m: any) => ({ ...m, _editing: false, _isNew: false }))
 }
 
@@ -194,29 +189,30 @@ async function saveMember(member: MemberRow) {
   if (!member.name?.trim()) return
 
   if (member._isNew) {
-    const { data } = await (client.from('members') as any)
-      .insert({
+    const data = await $fetch<{ id: number }>('/api/members', {
+      method: 'POST',
+      body: {
         name: member.name.trim(),
         gender: member.gender,
         avatar_url: member.avatar_url,
         role: 'member',
         is_active: true,
-      })
-      .select('id')
-      .single()
+      },
+    })
 
-    if (data) {
+    if (data?.id) {
       member.id = data.id
       member._isNew = false
       member._editing = false
     }
   } else {
-    await (client.from('members') as any)
-      .update({
+    await $fetch(`/api/members/${member.id}`, {
+      method: 'PATCH',
+      body: {
         name: member.name.trim(),
         gender: member.gender,
-      })
-      .eq('id', member.id)
+      },
+    })
     member._editing = false
   }
 }
@@ -224,9 +220,10 @@ async function saveMember(member: MemberRow) {
 async function toggleActive(member: MemberRow) {
   if (member._isNew) return
   const newVal = !member.is_active
-  await (client.from('members') as any)
-    .update({ is_active: newVal })
-    .eq('id', member.id)
+  await $fetch(`/api/members/${member.id}`, {
+    method: 'PATCH',
+    body: { is_active: newVal },
+  })
   member.is_active = newVal
 }
 
@@ -239,7 +236,7 @@ async function deleteMember() {
   if (!memberToDelete.value) return
   deleting.value = true
   try {
-    await (client.from('members') as any).delete().eq('id', memberToDelete.value.id)
+    await $fetch(`/api/members/${memberToDelete.value.id}`, { method: 'DELETE' })
     const idx = members.value.indexOf(memberToDelete.value)
     if (idx >= 0) members.value.splice(idx, 1)
     showDeleteModal.value = false
@@ -263,9 +260,10 @@ async function handleAvatarChange(event: Event) {
   member.avatar_url = base64
 
   if (member.id) {
-    await (client.from('members') as any)
-      .update({ avatar_url: base64 })
-      .eq('id', member.id)
+    await $fetch(`/api/members/${member.id}`, {
+      method: 'PATCH',
+      body: { avatar_url: base64 },
+    })
   }
 
   if (fileInput.value) fileInput.value.value = ''

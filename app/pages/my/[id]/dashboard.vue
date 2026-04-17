@@ -114,9 +114,9 @@
 
 <script setup lang="ts">
 import type { EditableSession } from '~/components/LedgerTable.vue'
+import { toDateInputValue } from '~/utils/dateInput'
 
 const route = useRoute()
-const client = useSupabaseClient()
 const memberId = Number(route.params.id)
 
 // Month picker
@@ -145,12 +145,12 @@ function nextMonth() {
 
 // Fetch members
 const { data: members } = await useAsyncData('members', async () => {
-  const { data } = await client
-    .from('members')
-    .select('id, name, gender, avatar_url')
-    .eq('is_active', true)
-    .order('name')
-  return (data || []) as { id: number; name: string; gender: string; avatar_url: string }[]
+  return await $fetch('/api/members?active=true') as {
+    id: number
+    name: string
+    gender: string
+    avatar_url: string
+  }[]
 })
 
 const currentMember = computed(() => {
@@ -164,13 +164,9 @@ const { data: sessions, pending: loadingSessions } = await useAsyncData(
     const startDate = `${yearMonth.value}-01`
     const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
     const endDate = `${yearMonth.value}-${String(daysInMonth).padStart(2, '0')}`
-    const { data } = await client
-      .from('sessions')
-      .select('*')
-      .gte('session_date', startDate)
-      .lte('session_date', endDate)
-      .order('session_date')
-    return (data || []) as any[]
+    return await $fetch(
+      `/api/sessions?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+    ) as any[]
   },
   { watch: [yearMonth] }
 )
@@ -181,11 +177,8 @@ const { data: attendances } = await useAsyncData(
   async () => {
     const sessionIds = (sessions.value || []).map((s) => s.id)
     if (!sessionIds.length) return []
-    const { data } = await client
-      .from('session_attendances')
-      .select('*')
-      .in('session_id', sessionIds)
-    return (data || []) as any[]
+    const q = sessionIds.join(',')
+    return await $fetch(`/api/session-attendances?sessionIds=${encodeURIComponent(q)}`) as any[]
   },
   { watch: [sessions] }
 )
@@ -196,11 +189,8 @@ const { data: guests } = await useAsyncData(
   async () => {
     const sessionIds = (sessions.value || []).map((s) => s.id)
     if (!sessionIds.length) return []
-    const { data } = await client
-      .from('session_guests')
-      .select('*')
-      .in('session_id', sessionIds)
-    return (data || []) as any[]
+    const q = sessionIds.join(',')
+    return await $fetch(`/api/session-guests?sessionIds=${encodeURIComponent(q)}`) as any[]
   },
   { watch: [sessions] }
 )
@@ -209,11 +199,9 @@ const { data: guests } = await useAsyncData(
 const { data: monthlyStats } = await useAsyncData(
   'monthlyStats',
   async () => {
-    const { data } = await client
-      .from('member_monthly_stats')
-      .select('member_id, is_paid')
-      .eq('year_month', yearMonth.value)
-    return (data || []) as any[]
+    return await $fetch(
+      `/api/member-monthly-stats?yearMonth=${encodeURIComponent(yearMonth.value)}`,
+    ) as any[]
   },
   { watch: [yearMonth] }
 )
@@ -259,7 +247,7 @@ const editableSessions = computed<EditableSession[]>(() => {
 
     return {
       id: s.id,
-      session_date: s.session_date,
+      session_date: toDateInputValue(s.session_date),
       shuttlecock_fee: (s.shuttlecock_quantity || 0) * (s.shuttlecock_price_per_unit || 0),
       court_fee: s.court_fee || 0,
       guest_fee: guestFee,

@@ -41,7 +41,6 @@
 </template>
 
 <script setup lang="ts">
-const client = useSupabaseClient()
 const accessCode = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -50,12 +49,10 @@ async function handleLogin() {
   loading.value = true
   error.value = ''
 
-  const { data } = await client
-    .from('members')
-    .select('id, name, role')
-    .eq('role', 'leader')
-    .eq('access_code', accessCode.value)
-    .single()
+  const data = await $fetch<{ id: number; name: string; role: string } | null>(
+    '/api/auth/leader-login',
+    { method: 'POST', body: { accessCode: accessCode.value } },
+  )
 
   if (data) {
     localStorage.setItem('leader', JSON.stringify(data))

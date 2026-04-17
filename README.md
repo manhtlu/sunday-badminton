@@ -6,7 +6,7 @@
 
 - **Frontend**: Nuxt 4 + Vue 3 + TypeScript
 - **UI**: Nuxt UI + Tailwind CSS
-- **Database**: Supabase (PostgreSQL)
+- **Database**: Neon (PostgreSQL), truy cập qua API Nitro (`server/api/`)
 - **Calendar**: v-calendar
 - **Deploy**: Vercel
 
@@ -20,13 +20,14 @@ cd sunday-badminton-team
 # 2. Install dependencies
 npm install
 
-# 3. Copy env file and fill in Supabase credentials
+# 3. Copy env file and add Neon connection string
 cp .env.example .env
-# Edit .env with your SUPABASE_URL and SUPABASE_KEY
+# Set DATABASE_URL from Neon Dashboard (Connection details)
 
-# 4. Run migrations on Supabase
-# Go to Supabase Dashboard > SQL Editor
-# Run each file in supabase/migrations/ in order (001 → 012)
+# 4. Create schema on Neon
+# Neon Dashboard → SQL Editor → paste & run database/neon-schema.sql
+# (Hoặc dùng psql: psql "$DATABASE_URL" -f database/neon-schema.sql)
+# Nếu migrate từ Supabase: export dữ liệu (pg_dump) rồi import vào Neon — schema đã tương thích.
 
 # 5. Start dev server
 npm run dev
@@ -50,8 +51,7 @@ gh repo create sunday-badminton-team --public --source=. --push
 3. Import repo `sunday-badminton-team`
 4. Vercel tự detect Nuxt → giữ nguyên settings mặc định
 5. Thêm **Environment Variables**:
-   - `SUPABASE_URL` = `https://your-project.supabase.co`
-   - `SUPABASE_KEY` = `your-anon-key`
+   - `DATABASE_URL` = connection string Neon (khuyến nghị dùng pooled + `sslmode=require`)
 6. Click **Deploy**
 
 ### Bước 3: Done
@@ -85,6 +85,17 @@ app/
 ├── layouts/            # Layouts
 ├── middleware/          # Auth middleware
 └── plugins/            # Plugins (v-calendar)
+database/
+└── neon-schema.sql     # Schema để chạy trên Neon (thay cho RLS Supabase)
+server/
+└── api/                # REST API → PostgreSQL qua @neondatabase/serverless
 supabase/
-└── migrations/         # 12 migration files
+└── migrations/         # Lịch sử migration (tham chiếu; schema tổng hợp ở database/neon-schema.sql)
 ```
+
+## Neon
+
+1. Tạo project tại [neon.tech](https://neon.tech), copy **connection string**.
+2. Chạy `database/neon-schema.sql` trong SQL Editor (database mới).
+3. Đặt `DATABASE_URL` trong `.env` và trên Vercel.
+4. (Tùy chọn) Cài [Neon CLI](https://neon.tech/docs/reference/neon-cli) để quản lý branch/project từ terminal.

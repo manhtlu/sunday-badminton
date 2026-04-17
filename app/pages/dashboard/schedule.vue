@@ -109,6 +109,8 @@
 </template>
 
 <script setup lang="ts">
+import { toDateInputValue } from '~/utils/dateInput'
+
 definePageMeta({
   layout: 'leader',
   middleware: 'leader',
@@ -127,8 +129,6 @@ interface Court {
   id: number
   name: string
 }
-
-const client = useSupabaseClient()
 
 const currentPage = ref({ month: new Date().getMonth() + 1, year: new Date().getFullYear() })
 const sessions = ref<Session[]>([])
@@ -153,7 +153,8 @@ const courtOptions = computed(() => [
 
 const calendarAttributes = computed(() =>
   sessions.value.map((s) => {
-    const date = new Date(s.session_date + 'T00:00:00')
+    const day = toDateInputValue(s.session_date)
+    const date = new Date(`${day}T12:00:00`)
     const dow = date.getDay()
     return {
       key: String(s.id),
@@ -192,7 +193,7 @@ function handleDayClick(day: any) {
 
 function editSession(session: Session) {
   editingSession.value = session
-  formData.session_date = session.session_date
+  formData.session_date = toDateInputValue(session.session_date)
   formData.name = session.name || 'Sinh hoạt nội bộ'
   formData.start_time = session.start_time?.slice(0, 5) || '19:30'
   formData.end_time = session.end_time?.slice(0, 5) || '21:30'
@@ -213,11 +214,15 @@ async function saveSession() {
     }
 
     if (editingSession.value) {
-      await (client.from('sessions') as any)
-        .update(payload)
-        .eq('id', editingSession.value.id)
+      await $fetch(`/api/sessions/${editingSession.value.id}`, {
+        method: 'PATCH',
+        body: payload,
+      })
     } else {
-      await (client.from('sessions') as any).insert(payload)
+      await $fetch('/api/sessions', {
+        method: 'POST',
+        body: payload,
+      })
     }
 
     showForm.value = false
@@ -231,7 +236,7 @@ async function deleteSession() {
   if (!editingSession.value) return
   deleting.value = true
   try {
-    await (client.from('sessions') as any).delete().eq('id', editingSession.value.id)
+    await $fetch(`/api/sessions/${editingSession.value.id}`, { method: 'DELETE' })
     showForm.value = false
     await fetchSessions()
   } finally {
@@ -257,19 +262,18 @@ async function fetchSessions() {
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`
   const endDate = `${year}-${String(month).padStart(2, '0')}-${daysInMonth}`
 
-  const { data } = await (client.from('sessions') as any)
-    .select('id, session_date, name, start_time, end_time, court_id')
-    .gte('session_date', startDate)
-    .lte('session_date', endDate)
-    .order('start_time')
+  const data = await $fetch(
+    `/api/sessions?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&fields=schedule`,
+  )
 
-  sessions.value = (data || []) as Session[]
+  sessions.value = ((data || []) as Session[]).map((s) => ({
+    ...s,
+    session_date: toDateInputValue(s.session_date),
+  }))
 }
 
 async function fetchCourts() {
-  const { data } = await (client.from('courts') as any)
-    .select('id, name')
-    .order('name')
+  const data = await $fetch('/api/courts?list=1')
   courts.value = (data || []) as Court[]
 }
 

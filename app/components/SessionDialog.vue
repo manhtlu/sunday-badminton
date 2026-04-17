@@ -297,6 +297,8 @@
 </template>
 
 <script setup lang="ts">
+import { getTodayYmd } from '~/utils/dateInput'
+
 interface Member {
   id: number
   name: string
@@ -325,6 +327,17 @@ const saving = ref(false)
 const maleEven = ref(false)
 const femaleEven = ref(false)
 const splitCalculated = ref(false)
+
+function applyCourtFeeFromSelection(courtId: string | number | '') {
+  if (courtId === '' || courtId == null) {
+    form.court_fee = 0
+    return
+  }
+  const court = props.courts.find((c) => Number(c.id) === Number(courtId))
+  form.court_fee = court != null
+    ? Number(court.court_fee ?? 0)
+    : 0
+}
 
 const form = reactive({
   id: null as number | null,
@@ -436,13 +449,9 @@ const totalCollected = computed(() => {
 })
 
 
-// Auto-fill court fee when court is selected
+// Auto-fill court fee when court is selected (IDs from API may be string | number)
 watch(() => form.court_id, (courtId) => {
-  if (!courtId) return
-  const court = props.courts.find((c) => c.id === Number(courtId))
-  if (court?.court_fee) {
-    form.court_fee = court.court_fee
-  }
+  applyCourtFeeFromSelection(courtId)
 })
 
 // Reset form when dialog opens
@@ -454,9 +463,8 @@ watch(isOpen, (val) => {
 
 function resetForm() {
   form.id = null
-  form.session_date = `${props.yearMonth}-01`
-  form.court_id = props.courts[0]?.id || ''
-  form.court_fee = 0
+  form.session_date = getTodayYmd()
+  form.court_id = props.courts[0]?.id ?? ''
   form.misc_fee = 0
   form.misc_fee_note = ''
   form.shuttlecock_tube_price = 0
@@ -477,6 +485,8 @@ function resetForm() {
   for (const m of props.members) {
     attendance[m.id] = true
   }
+
+  applyCourtFeeFromSelection(form.court_id)
 }
 
 function clearAllAttendance() {
@@ -538,8 +548,6 @@ function calculateSplit() {
   splitCalculated.value = true
 }
 
-const client = useSupabaseClient()
-
 async function handleSave() {
   saving.value = true
   try {
@@ -565,10 +573,16 @@ async function handleSave() {
     let sessionId: number
 
     if (form.id) {
-      await (client.from('sessions') as any).update(sessionData).eq('id', form.id)
+      await $fetch(`/api/sessions/${form.id}`, {
+        method: 'PATCH',
+        body: sessionData,
+      })
       sessionId = form.id
     } else {
-      const { data } = await (client.from('sessions') as any).insert(sessionData).select('id').single()
+      const data = await $fetch<{ id: number }>('/api/sessions', {
+        method: 'POST',
+        body: sessionData,
+      })
       sessionId = data.id
     }
 
@@ -592,25 +606,31 @@ async function handleSave() {
         ? (memberFees[m.id] ?? (m.gender === 'male' ? form.male_split_fee : form.female_split_fee))
         : 0
 
-      await (client.from('session_attendances') as any).upsert({
-        session_id: sessionId,
-        member_id: m.id,
-        is_present: isPresent,
-        fee_amount: fee,
-        guest_fee: guestFeeByMember[m.id] || 0,
-      }, { onConflict: 'session_id,member_id' })
+      await $fetch('/api/session-attendances/upsert', {
+        method: 'POST',
+        body: {
+          session_id: sessionId,
+          member_id: m.id,
+          is_present: isPresent,
+          fee_amount: fee,
+          guest_fee: guestFeeByMember[m.id] || 0,
+        },
+      })
     }
 
     // Save guests (with per-guest override fees)
     for (let i = 0; i < guestsToSave.length; i++) {
       const guest = guestsToSave[i]
       const fee = guestFees.value[i] ?? (guest.gender === 'male' ? form.male_split_fee : form.female_split_fee)
-      await (client.from('session_guests') as any).insert({
-        session_id: sessionId,
-        member_id: guest.linked_member_id || null,
-        guest_name: guest.name,
-        fee_amount: fee,
-        note: null,
+      await $fetch('/api/session-guests', {
+        method: 'POST',
+        body: {
+          session_id: sessionId,
+          member_id: guest.linked_member_id || null,
+          guest_name: guest.name,
+          fee_amount: fee,
+          note: null,
+        },
       })
     }
 

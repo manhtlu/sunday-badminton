@@ -34,7 +34,7 @@
           >
             <!-- Ngày -->
             <td class="px-3 py-2.5 text-center text-gray-900 font-medium border border-gray-200 w-[80px] sticky left-0 z-10 bg-white">
-              {{ formatDate(session.session_date) }}
+              {{ formatDateDdMm(session.session_date) }}
             </td>
             <!-- Cầu -->
             <td class="px-3 py-2.5 text-right text-gray-700 border border-gray-200">
@@ -126,6 +126,7 @@
 
 <script setup lang="ts">
 import type { EditableSession } from '~/components/LedgerTable.vue'
+import { formatDateDdMm } from '~/utils/dateInput'
 
 interface Member {
   id: number
@@ -188,8 +189,4 @@ function formatNumber(amount: number) {
   return new Intl.NumberFormat('vi-VN').format(amount)
 }
 
-function formatDate(dateStr: string) {
-  const date = new Date(dateStr)
-  return `${date.getDate()}/${date.getMonth() + 1}`
-}
 </script>
