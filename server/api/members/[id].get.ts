@@ -10,5 +10,6 @@ export default defineEventHandler(async (event) => {
     from members
     where id = ${id}
   `
-  return rows[0] ?? null
+  const row = rows[0]
+  return row != null ? normalizeBigintRow(row as Record<string, unknown>) : null
 })

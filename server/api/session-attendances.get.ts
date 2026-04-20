@@ -16,17 +16,19 @@ export default defineEventHandler(async (event) => {
   }
 
   if (memberId) {
-    return await sql`
+    const rows = await sql`
       select session_id, fee_amount, guest_fee, is_present
       from session_attendances
       where member_id = ${memberId}
         and session_id = any(${ids}::bigint[])
     `
+    return normalizeBigintRows(rows as Record<string, unknown>[])
   }
 
-  return await sql`
+  const rows = await sql`
     select *
     from session_attendances
     where session_id = any(${ids}::bigint[])
   `
+  return normalizeBigintRows(rows as Record<string, unknown>[])
 })

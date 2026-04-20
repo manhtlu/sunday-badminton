@@ -1,8 +1,21 @@
+<#
+.SYNOPSIS
+  Stage all, commit, optionally push.
+
+.EXAMPLE
+  .\auto-git-push.ps1
+  .\auto-git-push.ps1 -Message "fix: typo in README"
+  .\auto-git-push.ps1 "docs: update flow"   # positional (same as -Message)
+  .\auto-git-push.ps1 -m "chore: cleanup" # alias for -Message
+#>
 param(
-  [string]$message = "chore: auto commit",
-  [string]$remote = "origin",
-  [string]$branch = "main",
-  [switch]$skipPushIfNoChanges = $true
+  [Parameter(Position = 0, HelpMessage = "Git commit message (default: chore: auto commit)")]
+  [Alias("m")]
+  [string]$Message = "chore: auto commit",
+
+  [string]$Remote = "origin",
+  [string]$Branch = "main",
+  [switch]$SkipPushIfNoChanges = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,7 +25,7 @@ $porcelain = git status --porcelain
 $hasChanges = ($porcelain -and $porcelain.Trim().Length -gt 0)
 
 if (-not $hasChanges) {
-  if ($skipPushIfNoChanges) {
+  if ($SkipPushIfNoChanges) {
     Write-Host "No changes detected. Skipping add/commit/push."
     exit 0
   }
@@ -28,10 +41,10 @@ if (-not $stagedPorcelain -or $stagedPorcelain.Trim().Length -eq 0) {
   exit 0
 }
 
-Write-Host "Running: git commit -m $message"
-git commit -m $message
+Write-Host "Running: git commit -m `"$Message`""
+git commit -m "$Message"
 
-Write-Host "About to push to $remote $branch"
+Write-Host "About to push to $Remote $Branch"
 $answer = Read-Host "Push? (y/N)"
 $answerNormalized = ""
 if ($null -ne $answer) {
@@ -43,8 +56,8 @@ if ($answerNormalized -ne "y" -and $answerNormalized -ne "yes") {
   exit 0
 }
 
-Write-Host "Running: git push $remote $branch"
-git push $remote $branch
+Write-Host "Running: git push $Remote $Branch"
+git push $Remote $Branch
 
 Write-Host "Done."
 

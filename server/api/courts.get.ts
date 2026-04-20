@@ -5,25 +5,28 @@ export default defineEventHandler(async (event) => {
   const activeOnly = query.active === 'true' || query.active === '1'
 
   if (listMode) {
-    return await sql`
+    const rows = await sql`
       select id, name
       from courts
       order by name
     `
+    return normalizeBigintRows(rows as Record<string, unknown>[])
   }
 
   if (activeOnly) {
-    return await sql`
+    const rows = await sql`
       select id, name, court_fee
       from courts
       where is_active = true
       order by name
     `
+    return normalizeBigintRows(rows as Record<string, unknown>[])
   }
 
-  return await sql`
+  const rows = await sql`
     select id, name, address, directions, court_fee, is_active
     from courts
     order by is_active desc, name
   `
+  return normalizeBigintRows(rows as Record<string, unknown>[])
 })

@@ -14,5 +14,6 @@ export default defineEventHandler(async (event) => {
       and access_code = ${accessCode}
     limit 1
   `
-  return rows[0] ?? null
+  const row = rows[0]
+  return row != null ? normalizeBigintRow(row as Record<string, unknown>) : null
 })

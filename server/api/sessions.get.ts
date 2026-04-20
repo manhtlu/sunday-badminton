@@ -10,20 +10,22 @@ export default defineEventHandler(async (event) => {
   }
 
   if (fields === 'schedule') {
-    return await sql`
+    const rows = await sql`
       select id, session_date, name, start_time, end_time, court_id
       from sessions
       where session_date >= ${startDate}
         and session_date <= ${endDate}
       order by start_time
     `
+    return normalizeBigintRows(rows as Record<string, unknown>[])
   }
 
-  return await sql`
+  const rows = await sql`
     select *
     from sessions
     where session_date >= ${startDate}
       and session_date <= ${endDate}
     order by session_date
   `
+  return normalizeBigintRows(rows as Record<string, unknown>[])
 })

@@ -64,5 +64,5 @@ export default defineEventHandler(async (event) => {
     )
     returning id
   `
-  return rows[0]
+  return normalizeBigintRow(rows[0] as Record<string, unknown>)
 })

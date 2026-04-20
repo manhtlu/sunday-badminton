@@ -1,33 +1,61 @@
 /**
+ * Calendar timezone for session rows (Vietnam local dates in DB / operations).
+ * Fixes ISO datetimes like `...T17:00:00.000Z` mapping to the next calendar day in VN.
+ */
+const SESSION_CALENDAR_TIMEZONE = 'Asia/Ho_Chi_Minh'
+
+function ymdInTimeZone(d: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d)
+  const y = parts.find((p) => p.type === 'year')?.value ?? ''
+  const mo = parts.find((p) => p.type === 'month')?.value ?? ''
+  const day = parts.find((p) => p.type === 'day')?.value ?? ''
+  if (!y || !mo || !day) {
+    return ''
+  }
+  return `${y}-${mo}-${day}`
+}
+
+/**
  * Normalize Postgres / JSON date values to `yyyy-MM-dd` for <input type="date">.
- * Neon and some drivers return ISO strings with a time part, which breaks date inputs.
+ * - Plain `YYYY-MM-DD` (Postgres `date` as string) is returned as-is.
+ * - ISO strings with a time part are converted using the session calendar TZ (not UTC prefix).
+ * - `Date` values use the same TZ (avoids local-browser off-by-one vs DB).
  */
 export function toDateInputValue(value: unknown): string {
   if (value == null || value === '') {
     return ''
   }
   if (typeof value === 'string') {
-    const m = value.match(/^(\d{4}-\d{2}-\d{2})/)
-    if (m) {
-      return m[1]
+    const trimmed = value.trim()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+      const normalized = trimmed.includes('T')
+        ? trimmed
+        : trimmed.replace(/^(\d{4}-\d{2}-\d{2})\s+/, '$1T')
+      if (/^\d{4}-\d{2}-\d{2}T/.test(normalized)) {
+        const d = new Date(normalized)
+        if (!Number.isNaN(d.getTime())) {
+          return ymdInTimeZone(d, SESSION_CALENDAR_TIMEZONE)
+        }
+      }
     }
   }
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const y = value.getFullYear()
-    const mo = String(value.getMonth() + 1).padStart(2, '0')
-    const d = String(value.getDate()).padStart(2, '0')
-    return `${y}-${mo}-${d}`
+    return ymdInTimeZone(value, SESSION_CALENDAR_TIMEZONE)
   }
   return ''
 }
 
-/** Local calendar date as `yyyy-MM-dd` (for HTML date input defaults). */
+/** “Today” as calendar date in the team timezone (for session defaults). */
 export function getTodayYmd(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const mo = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${mo}-${day}`
+  return ymdInTimeZone(new Date(), SESSION_CALENDAR_TIMEZONE)
 }
 
 /**
