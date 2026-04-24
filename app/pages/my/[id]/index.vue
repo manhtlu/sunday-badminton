@@ -179,6 +179,8 @@
       class="hidden"
       @change="handleAvatarChange"
     />
+
+    <FloatingCalculator placement="memberMy" />
   </div>
 </template>
 

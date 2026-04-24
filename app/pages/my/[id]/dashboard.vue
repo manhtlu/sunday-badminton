@@ -93,22 +93,47 @@
       </div>
     </main>
 
-    <!-- Floating buttons -->
-    <NuxtLink
-      to="/"
-      class="fixed bottom-6 left-6 z-50 bg-white shadow-lg ring-1 ring-gray-200 rounded-full px-4 py-2.5 flex items-center gap-2 hover:bg-gray-50 transition-colors"
-    >
-      <UIcon name="i-heroicons-users" class="text-brand text-lg" />
-      <span class="text-sm font-medium text-gray-700">Thành viên</span>
-    </NuxtLink>
+    <FloatingCalculator placement="memberDashboard">
+      <template #trigger="{ isOpen: calcOpen, toggleOpen }">
+        <div
+          class="fixed bottom-6 z-[105] left-0 right-0 flex justify-center px-3 sm:left-6 sm:right-auto sm:justify-start sm:px-0 pointer-events-none"
+        >
+          <div
+            class="pointer-events-auto w-full max-w-[calc(100vw-1.5rem)] flex flex-col items-center gap-2 rounded-2xl px-2.5 py-2 bg-gray-500/50 sm:w-auto sm:max-w-none sm:flex-row sm:items-center sm:gap-2 sm:rounded-full sm:bg-transparent sm:p-0"
+          >
+            <div class="flex flex-row flex-wrap justify-center gap-2 sm:contents">
+              <NuxtLink
+                to="/"
+                class="shrink-0 bg-white shadow-lg ring-1 ring-gray-200 rounded-full px-4 py-2.5 flex items-center gap-2 hover:bg-gray-50 transition-colors"
+              >
+                <UIcon name="i-heroicons-users" class="text-brand text-lg" />
+                <span class="text-sm font-medium text-gray-700">Thành viên</span>
+              </NuxtLink>
 
-    <NuxtLink
-      :to="`/my/${memberId}`"
-      class="fixed bottom-6 right-6 z-50 bg-brand shadow-lg rounded-full px-4 py-2.5 flex items-center gap-2 hover:bg-brand-600 transition-colors"
-    >
-      <UAvatar :src="currentMember?.avatar_url" :alt="currentMember?.name" size="2xs" />
-      <span class="text-sm font-medium text-white">Trang cá nhân</span>
-    </NuxtLink>
+              <button
+                type="button"
+                class="shrink-0 bg-white shadow-lg ring-1 ring-gray-200 rounded-full px-4 py-2.5 flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+                :class="calcOpen ? 'ring-2 ring-brand' : ''"
+                :aria-pressed="calcOpen"
+                aria-label="Máy tính"
+                @click="toggleOpen"
+              >
+                <UIcon name="i-heroicons-calculator" class="text-brand text-lg" />
+                <span>Máy tính</span>
+              </button>
+            </div>
+
+            <NuxtLink
+              :to="`/my/${memberId}`"
+              class="shrink-0 bg-brand shadow-lg rounded-full px-4 py-2.5 flex items-center gap-2 hover:bg-brand-600 transition-colors"
+            >
+              <UAvatar :src="currentMember?.avatar_url" :alt="currentMember?.name" size="2xs" />
+              <span class="text-sm font-medium text-white">Trang cá nhân</span>
+            </NuxtLink>
+          </div>
+        </div>
+      </template>
+    </FloatingCalculator>
   </div>
 </template>
 
