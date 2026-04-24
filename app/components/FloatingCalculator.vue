@@ -41,16 +41,21 @@
           ref="exprInputRef"
           v-model="expression"
           type="text"
-          inputmode="decimal"
+          :inputmode="isSpNoKeyboard ? 'none' : 'decimal'"
+          :readonly="isSpNoKeyboard"
           autocomplete="off"
           spellcheck="false"
           aria-label="Biểu thức"
           placeholder="0"
           class="w-full text-right text-xl sm:text-2xl font-mono font-semibold text-gray-900 bg-gray-50 rounded-lg px-2 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
           @keydown="onExprKeydown"
+          @focus="onExprFocus"
         />
-        <p class="text-[10px] text-gray-400 mt-1 text-right">
+        <p v-show="!isSpNoKeyboard" class="text-[10px] text-gray-400 mt-1 text-right">
           Gõ số, + − × ÷, ngoặc (); Enter =, Esc xóa hết
+        </p>
+        <p v-show="isSpNoKeyboard" class="text-[10px] text-gray-400 mt-1 text-right">
+          Chạm các nút bên dưới để nhập
         </p>
       </div>
 
@@ -140,6 +145,57 @@ const isOpen = ref(false)
 const exprInputRef = ref<HTMLInputElement | null>(null)
 const expression = ref('')
 
+/** SP: avoid soft keyboard; caret kept in JS (input is readonly) */
+const isSpNoKeyboard = ref(false)
+const spCaretIndex = ref(0)
+
+function syncSpBreakpoint() {
+  if (!import.meta.client) {
+    return
+  }
+  isSpNoKeyboard.value = window.matchMedia('(max-width: 639.98px)').matches
+}
+
+function clampCaretIndex(i: number, len: number) {
+  return Math.min(Math.max(0, i), len)
+}
+
+function getCaretSel(): { start: number; end: number } {
+  const len = expression.value.length
+  if (isSpNoKeyboard.value) {
+    const i = clampCaretIndex(spCaretIndex.value, len)
+    return { start: i, end: i }
+  }
+  const el = exprInputRef.value
+  if (!el) {
+    return { start: len, end: len }
+  }
+  const start = el.selectionStart ?? len
+  const end = el.selectionEnd ?? start
+  return { start, end }
+}
+
+function setCaretSel(start: number, end: number) {
+  const len = expression.value.length
+  const s = clampCaretIndex(Math.min(start, end), len)
+  const e = clampCaretIndex(Math.max(start, end), len)
+  if (isSpNoKeyboard.value) {
+    spCaretIndex.value = e
+    return
+  }
+  nextTick(() => {
+    const el = exprInputRef.value
+    el?.focus()
+    el?.setSelectionRange(s, e)
+  })
+}
+
+function onExprFocus(e: FocusEvent) {
+  if (isSpNoKeyboard.value) {
+    ;(e.target as HTMLInputElement).blur()
+  }
+}
+
 const btnBase = 'rounded-xl py-3 text-sm font-semibold transition-colors active:scale-[0.98] flex items-center justify-center min-h-[2.75rem]'
 const btnNum = `${btnBase} bg-gray-50 text-gray-900 hover:bg-gray-100 ring-1 ring-gray-200`
 const btnOp = `${btnBase} bg-amber-100 text-amber-900 hover:bg-amber-200`
@@ -180,10 +236,31 @@ const shellClass = computed(() => {
 watch(isOpen, (open) => {
   if (open) {
     loadFromStorage()
+    syncSpBreakpoint()
     nextTick(() => {
-      exprInputRef.value?.focus()
-      exprInputRef.value?.select()
+      if (isSpNoKeyboard.value) {
+        const len = expression.value.length
+        spCaretIndex.value = clampCaretIndex(len, len)
+        exprInputRef.value?.blur()
+      }
+      else {
+        exprInputRef.value?.focus()
+        exprInputRef.value?.select()
+      }
     })
+  }
+})
+
+onMounted(() => {
+  syncSpBreakpoint()
+  if (import.meta.client) {
+    window.addEventListener('resize', syncSpBreakpoint)
+  }
+})
+
+onUnmounted(() => {
+  if (import.meta.client) {
+    window.removeEventListener('resize', syncSpBreakpoint)
   }
 })
 
@@ -209,61 +286,62 @@ function prettyForHistory(expr: string): string {
 function insertAtCaret(text: string) {
   if (expression.value === 'Lỗi') {
     expression.value = ''
+    spCaretIndex.value = 0
   }
   const el = exprInputRef.value
   if (!el) {
     expression.value = (expression.value || '') + text
+    spCaretIndex.value = expression.value.length
     return
   }
-  const start = el.selectionStart ?? expression.value.length
-  const end = el.selectionEnd ?? start
+  const { start, end } = getCaretSel()
   const cur = expression.value
   expression.value = cur.slice(0, start) + text + cur.slice(end)
-  nextTick(() => {
-    el.focus()
-    const pos = start + text.length
-    el.setSelectionRange(pos, pos)
-  })
+  const pos = start + text.length
+  setCaretSel(pos, pos)
 }
 
 function backspace() {
   if (expression.value === 'Lỗi') {
     expression.value = ''
+    spCaretIndex.value = 0
     return
   }
   const el = exprInputRef.value
   if (!el) {
     expression.value = expression.value.slice(0, -1)
+    spCaretIndex.value = expression.value.length
     return
   }
-  const start = el.selectionStart ?? 0
-  const end = el.selectionEnd ?? start
+  const { start, end } = getCaretSel()
   if (start !== end) {
     expression.value = expression.value.slice(0, start) + expression.value.slice(end)
-    nextTick(() => {
-      el.focus()
-      el.setSelectionRange(start, start)
-    })
+    setCaretSel(start, start)
     return
   }
   if (start <= 0) {
     return
   }
   expression.value = expression.value.slice(0, start - 1) + expression.value.slice(start)
-  nextTick(() => {
-    el.focus()
-    const pos = start - 1
-    el.setSelectionRange(pos, pos)
-  })
+  setCaretSel(start - 1, start - 1)
 }
 
 function clearEntry() {
   expression.value = ''
+  spCaretIndex.value = 0
 }
 
 function clearAll() {
   expression.value = ''
-  nextTick(() => exprInputRef.value?.focus())
+  spCaretIndex.value = 0
+  nextTick(() => {
+    if (!isSpNoKeyboard.value) {
+      exprInputRef.value?.focus()
+    }
+    else {
+      exprInputRef.value?.blur()
+    }
+  })
 }
 
 function equals() {
@@ -274,16 +352,13 @@ function equals() {
   const result = evaluateExpression(raw)
   if (!result.ok) {
     expression.value = 'Lỗi'
+    spCaretIndex.value = expression.value.length
     return
   }
   const resultStr = formatNum(result.value)
   expression.value = resultStr
   pushEntry(`${prettyForHistory(raw)} = ${resultStr}`)
-  nextTick(() => {
-    const el = exprInputRef.value
-    el?.focus()
-    el?.setSelectionRange(resultStr.length, resultStr.length)
-  })
+  setCaretSel(resultStr.length, resultStr.length)
 }
 
 const numpadDigitMap: Record<string, string> = {
@@ -300,6 +375,16 @@ const numpadDigitMap: Record<string, string> = {
 }
 
 function onExprKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    clearAll()
+    return
+  }
+  if (isSpNoKeyboard.value) {
+    e.preventDefault()
+    return
+  }
+
   if (expression.value === 'Lỗi' && e.key !== 'Escape' && e.key !== 'Tab') {
     expression.value = ''
   }
@@ -309,12 +394,6 @@ function onExprKeydown(e: KeyboardEvent) {
     equals()
     return
   }
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    clearAll()
-    return
-  }
-
   const mappedDigit = numpadDigitMap[e.code]
   if (mappedDigit) {
     e.preventDefault()
@@ -367,43 +446,57 @@ function onPanelKeydown(e: KeyboardEvent) {
   const digit = numpadDigitMap[e.code]
   if (digit) {
     e.preventDefault()
-    exprInputRef.value?.focus()
+    if (!isSpNoKeyboard.value) {
+      exprInputRef.value?.focus()
+    }
     insertAtCaret(digit)
     return
   }
   if (e.code === 'NumpadAdd') {
     e.preventDefault()
-    exprInputRef.value?.focus()
+    if (!isSpNoKeyboard.value) {
+      exprInputRef.value?.focus()
+    }
     insertAtCaret('+')
     return
   }
   if (e.code === 'NumpadSubtract') {
     e.preventDefault()
-    exprInputRef.value?.focus()
+    if (!isSpNoKeyboard.value) {
+      exprInputRef.value?.focus()
+    }
     insertAtCaret('-')
     return
   }
   if (e.code === 'NumpadMultiply') {
     e.preventDefault()
-    exprInputRef.value?.focus()
+    if (!isSpNoKeyboard.value) {
+      exprInputRef.value?.focus()
+    }
     insertAtCaret('*')
     return
   }
   if (e.code === 'NumpadDecimal') {
     e.preventDefault()
-    exprInputRef.value?.focus()
+    if (!isSpNoKeyboard.value) {
+      exprInputRef.value?.focus()
+    }
     insertAtCaret('.')
     return
   }
   if (e.code === 'NumpadDivide') {
     e.preventDefault()
-    exprInputRef.value?.focus()
+    if (!isSpNoKeyboard.value) {
+      exprInputRef.value?.focus()
+    }
     insertAtCaret('/')
     return
   }
   if (e.key === 'Enter' || e.key === 'NumpadEnter') {
     e.preventDefault()
-    exprInputRef.value?.focus()
+    if (!isSpNoKeyboard.value) {
+      exprInputRef.value?.focus()
+    }
     equals()
   }
 }
