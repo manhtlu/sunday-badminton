@@ -297,13 +297,14 @@ const { data: sessionDetails } = await useAsyncData(
     return (sessions as any[]).map((s: any) => {
       const att = (attendances as any[] || []).find((a: any) => a.session_id === s.id)
       const personalFee: number = att ? (att.fee_amount || 0) : 0
+      const guestFee: number = att ? (att.guest_fee || 0) : 0
       const sessionGuests = guestMap[s.id] || []
       return {
         sessionId: s.id,
         date: formatDateDdMm(s.session_date),
         courtName: courtMap[s.court_id] || '',
         absent: !att || !att.is_present,
-        fee: personalFee + sessionGuests.reduce((sum: number, g: any) => sum + g.fee, 0),
+        fee: personalFee + guestFee,
         personalFee,
         guests: sessionGuests,
       }
